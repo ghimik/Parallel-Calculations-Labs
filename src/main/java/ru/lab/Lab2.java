@@ -119,71 +119,50 @@ public class Lab2 {
     public static class IntegrationUtils {
 
         public static Function<Double, Double> funcA() {
-            return x -> Math.log(x + 3) / (x + 3);
+            return x -> x / Math.sqrt(x * x - 16);
         }
 
         public static Function<Double, Double> funcB() {
-            return x -> x * x * Math.sin(4 * x);
+            return x -> {
+                double ln = Math.log(x);
+                return Math.pow(x, 4) * ln * ln;
+            };
         }
 
         public static Function<Double, Double> funcC() {
-            return x -> 1.0 / (2 * Math.sin(x) + 3 - 3 * Math.cos(x));
+            return x -> 1.0 / (3 * Math.pow(Math.cos(x), 2) + 2 * Math.pow(Math.sin(x), 2));
         }
 
         public static Function<Double, Double> funcD() {
-            return x -> 1.0 / (Math.sqrt(x + 1) + Math.pow(x + 1, 0.25));
+            return x -> Math.sqrt(x) / (Math.pow(Math.pow(x, 3), 0.25) + 1);
         }
 
         public static Function<Double, Double> funcE() {
-            return x -> (x * x * x + 2 * x * x - 4 * x + 3)
-                    / (x * x * x - 2 * x * x + x);
-        }
-
-        public static int findN(Function<Double, Double> f, double a, double b, double eps,
-                                BiFunction<Function<Double, Double>, Integer, Double> integrator) {
-            int N = 100;
-            int maxIterations = 20; // 2^20 уже дохуя
-
-            for (int i = 0; i < maxIterations; i++) {
-                double result1 = integrator.apply(f, N);
-                double result2 = integrator.apply(f, N * 2);
-
-                if (Math.abs(result1 - result2) < eps) {
-                    System.out.printf("Найдено N = %d, погрешность = %.10f%n",
-                            N * 2, Math.abs(result1 - result2));
-                    return N * 2;
-                }
-
-                N *= 2;
-                if (N > 10000000) break;
-            }
-
-            return N;
+            return x -> (Math.pow(x, 3) - 2 * Math.pow(x, 2) - 12 * x - 7)
+                    / (Math.pow(x, 3) - Math.pow(x, 2));
         }
 
     }
 
     public static void main(String[] args) {
-        // Константы для эксперимента
         final double[] ACCURACIES = {1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12, 1e-13};
-        final int[] THREAD_COUNTS = {4, 8};
+        final int[] THREAD_COUNTS = {2, 4};
         final int REPEATS = 100;
 
-        // Функции и их пределы интегрирования
         List<Function<Double, Double>> functions = List.of(
-                IntegrationUtils.funcA(), // ln(x+3)/(x+3)
-                IntegrationUtils.funcB(), // x²*sin(4x)
-                IntegrationUtils.funcC(), // 1/(2sinx + 3 - 3cosx)
-                IntegrationUtils.funcD(), // 1/(sqrt(x+1) + (x+1)^0.25)
-                IntegrationUtils.funcE()  // (x³+2x²-4x+3)/(x³-2x²+x)
+                IntegrationUtils.funcA(), // x / sqrt(x² - 16)
+                IntegrationUtils.funcB(), // x⁴ * (ln x)²
+                IntegrationUtils.funcC(), // 1 / (3cos²x + 2sin²x)
+                IntegrationUtils.funcD(), // sqrt(x) / ⁴√(x³) + 1
+                IntegrationUtils.funcE()  // (x³ - 2x² - 12x - 7) / (x³ - x²)
         );
 
         double[][] intervals = {
-                {1.0, 5.0},   // для funcA
-                {0.0, Math.PI}, // для funcB
-                {Math.PI/2, Math.PI}, // для funcC
-                {0.0, 3.0},    // для funcD
-                {2.0, 4.0}     // для funcE
+                {5.0, 10.0},            // для funcA: x > 4 (область определения sqrt(x² - 16))
+                {1.0, 3.0},             // для funcB: ln(x) требует x > 0, избегаем x=0
+                {0.0, Math.PI / 2},     // для funcC: функция периодическая, выбран интервал без особенностей
+                {0.0, 2.0},             // для funcD: x >= 0, подкоренное выражение > 0
+                {2.0, 5.0}              // для funcE: исключаем x=0 и x=1 (особенности в знаменателе)
         };
 
         String[] functionNames = {"A", "B", "C", "D", "E"};
@@ -236,7 +215,6 @@ public class Lab2 {
         }
     }
 
-    // Вспомогательные методы
     private static int findOptimalN(Function<Double, Double> f, double a, double b,
                                     double eps, int methodIdx) {
         int N = 100;
@@ -271,7 +249,6 @@ public class Lab2 {
     }
 
     private static long measureTime(Runnable task, int repeats) {
-        // Прогрев JVM
         for (int i = 0; i < 100; i++) {
             task.run();
         }
@@ -280,7 +257,7 @@ public class Lab2 {
         task.run();
         long end = System.nanoTime();
 
-        return (end - start) / repeats; // среднее время за один прогон
+        return (end - start) / repeats;
     }
 
 
